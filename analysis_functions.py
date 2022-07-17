@@ -1,51 +1,76 @@
+from threading import Timer
 from PyQt5 import QtWidgets, QtCore, QtGui
 import pyqtgraph as pg
 from statistics import mean
 import scipy.signal as sig
 import numpy as np
+import sys
 
 class PlotGraph(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(PlotGraph, self).__init__(*args, **kwargs)
-        self.timelist = [[[],[]],[[],[]],[[],[]],[[],[]]]
-        self.signals = [[[],[]],[[],[]],[[],[]],[[],[]]]
 
-        self.plot = [None for i in range(4)]
-        self.curve = [[None, None] for i in range(4)]
-    
+    def set_parameters(self, eeg_flag, ecg_flag, eda_flag, emg_flag):
+        self.channelnum = 0
+
+        for flag in [eeg_flag, ecg_flag, eda_flag, emg_flag]:
+            if flag == True:
+                self.channelnum += 1
+        self.timelist = [[[],[]] for i in range(self.channelnum)]
+        self.signals = [[[],[]] for i in range(self.channelnum)]
+
+        self.plot = [None for i in range(self.channelnum)]
+        self.curve = [[None, None] for i in range(self.channelnum)]
+        self.eeg_flag = eeg_flag
+        self.ecg_flag = ecg_flag
+        self.eda_flag = eda_flag
+        self.emg_flag = emg_flag
+
     # init func for raw signal plot
     def raw_init(self):
         self.win = pg.GraphicsLayoutWidget(show=True, title="Raw signals")
         self.win.resize(600, 800)
         self.win.setWindowTitle('Plotting')
-        self.plot[0] = self.win.addPlot(title="Raw EEG")
-        self.curve[0][0] = self.plot[0].plot(pen='b')
-        self.curve[0][1] = self.plot[0].plot(pen='r')
-        self.win.nextRow()
-        self.plot[1] = self.win.addPlot(title="Raw ECG")
-        self.curve[1][0] = self.plot[1].plot(pen='b')
-        self.curve[1][1] = self.plot[1].plot(pen='r')
-        self.win.nextRow()
-        self.plot[2] = self.win.addPlot(title="Raw EDA")
-        self.curve[2][0] = self.plot[2].plot(pen='b')
-        self.curve[2][1] = self.plot[2].plot(pen='r')
-        self.win.nextRow()
-        self.plot[3] = self.win.addPlot(title="Raw EMG")
-        self.curve[3][0] = self.plot[3].plot(pen='b')
-        self.curve[3][1] = self.plot[3].plot(pen='r')
+        if self.eeg_flag == True:
+            self.plot[0] = self.win.addPlot(title="Raw EEG")
+            self.curve[0][0] = self.plot[0].plot(pen='b')
+            self.curve[0][1] = self.plot[0].plot(pen='r')
+            self.win.nextRow()
+        if self.ecg_flag == True:
+            self.plot[1] = self.win.addPlot(title="Raw ECG")
+            self.curve[1][0] = self.plot[1].plot(pen='b')
+            self.curve[1][1] = self.plot[1].plot(pen='r')
+            self.win.nextRow()
+        if self.eda_flag == True:
+            self.plot[2] = self.win.addPlot(title="Raw EDA")
+            self.curve[2][0] = self.plot[2].plot(pen='b')
+            self.curve[2][1] = self.plot[2].plot(pen='r')
+            self.win.nextRow()
+        if self.emg_flag == True:
+            self.plot[3] = self.win.addPlot(title="Raw EMG")
+            self.curve[3][0] = self.plot[3].plot(pen='b')
+            self.curve[3][1] = self.plot[3].plot(pen='r')
 
     # init func for bar graph plot
-    def bar_init(self):
+    def bar_init(self, analysis_type):
+        self.analysis_type = analysis_type
+
         # creating a plot window
         self.plot = pg.plot()
         self.plot.setYRange(0, 100)
         self.plot.setWindowTitle('Matching score (cross correlation)')
         
-        self.x = range(4)
-        self.corr = [0,0,0,0,0]
+        self.x = range(self.channelnum)
+        self.corr = [0 for i in range(self.channelnum)]
 
         # setting x labels    
-        xlab = ['eeg','ecg','eda','emg']
+        xlab_options = ['eeg','ecg','eda','emg']
+        xlab = []
+        i = 0
+        for flag in [self.eeg_flag, self.ecg_flag, self.eda_flag, self.emg_flag]:
+            if flag == True:
+                xlab.append(xlab_options[i])
+            i += 1
         ticks=[]
         for i, item in enumerate(xlab):
             ticks.append( (self.x[i], item) )
@@ -60,17 +85,20 @@ class PlotGraph(QtWidgets.QMainWindow):
         
     # update the graph
     def update_raw_graph(self):
-        for i in range(4):
+        for i in range(self.channelnum):
             for j in range(2):
                 self.curve[i][j].setData(x=self.timelist[i][j], y=self.signals[i][j])
     
     def update_bar_graph(self):
-        for i in range(4):
-            self.corr[i] = 100 * cross_correlation(self.timelist[i][0], self.timelist[i][1], self.signals[i][0], self.signals[i][1])
-        self.plot.removeItem(self.bargraph)
-        self.bargraph = pg.BarGraphItem(x = self.x, height = self.corr, width = 0.6, brush ='r')
-        self.plot.addItem(self.bargraph)
+        if self.analysis_type == 'Cross Correlation':
+            for i in range(self.channelnum):
+                self.corr[i] = 100 * cross_correlation(self.timelist[i][0], self.timelist[i][1], self.signals[i][0], self.signals[i][1])
+            self.plot.removeItem(self.bargraph)
+            self.bargraph = pg.BarGraphItem(x = self.x, height = self.corr, width = 0.6, brush ='r')
+            self.plot.addItem(self.bargraph)
 
+    def closeEvent(self, event):
+        sys.exit(0)
 
 def aligntimerange (t1, t2, s1, s2):
     '''

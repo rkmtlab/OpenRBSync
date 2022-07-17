@@ -2,6 +2,7 @@ from pylsl import StreamInlet, resolve_stream, lost_error
 import datetime
 import os
 import time
+
 import timesync
 
 bitalino_fname = ''
