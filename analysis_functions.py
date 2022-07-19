@@ -5,17 +5,42 @@ from statistics import mean
 import scipy.signal as sig
 import numpy as np
 import sys
+import copy
+import os
+import datetime
+from pyrqa.analysis_type import Cross
+from pyrqa.time_series import TimeSeries
+from pyrqa.settings import Settings
+from pyrqa.neighbourhood import FixedRadius
+from pyrqa.metric import EuclideanMetric
+from pyrqa.computation import RQAComputation
+
+sync_fname = ''
 
 class PlotGraph(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(PlotGraph, self).__init__(*args, **kwargs)
 
     def set_parameters(self, eeg_flag, ecg_flag, eda_flag, emg_flag):
+        global sync_fname
         self.channelnum = 0
+        channeloptions = ['eeg', 'ecg', 'eda', 'emg']
+        self.channellist = []
+        self.channeltitlelist = 'timestamp,'
+        i = 0
 
         for flag in [eeg_flag, ecg_flag, eda_flag, emg_flag]:
             if flag == True:
                 self.channelnum += 1
+                self.channellist.append(channeloptions[i])
+            i += 1
+        
+        for j in range(len(self.channellist)):
+            if j != len(self.channellist) - 1:
+                self.channeltitlelist += self.channellist[j] + ' sync score,'
+            else:
+                self.channeltitlelist += self.channellist[j] + ' sync score\n'
+
         self.timelist = [[[],[]] for i in range(self.channelnum)]
         self.signals = [[[],[]] for i in range(self.channelnum)]
 
@@ -31,25 +56,31 @@ class PlotGraph(QtWidgets.QMainWindow):
         self.win = pg.GraphicsLayoutWidget(show=True, title="Raw signals")
         self.win.resize(600, 800)
         self.win.setWindowTitle('Plotting')
+        self.win.setBackground('w')
+        #self.win.close = self.close
+        i = 0
         if self.eeg_flag == True:
-            self.plot[0] = self.win.addPlot(title="Raw EEG")
-            self.curve[0][0] = self.plot[0].plot(pen='b')
-            self.curve[0][1] = self.plot[0].plot(pen='r')
+            self.plot[i] = self.win.addPlot(title="Raw EEG")
+            self.curve[i][0] = self.plot[i].plot(pen='b')
+            self.curve[i][1] = self.plot[i].plot(pen='r')
             self.win.nextRow()
+            i += 1
         if self.ecg_flag == True:
-            self.plot[1] = self.win.addPlot(title="Raw ECG")
-            self.curve[1][0] = self.plot[1].plot(pen='b')
-            self.curve[1][1] = self.plot[1].plot(pen='r')
+            self.plot[i] = self.win.addPlot(title="Raw ECG")
+            self.curve[i][0] = self.plot[i].plot(pen='b')
+            self.curve[i][1] = self.plot[i].plot(pen='r')
             self.win.nextRow()
+            i += 1
         if self.eda_flag == True:
-            self.plot[2] = self.win.addPlot(title="Raw EDA")
-            self.curve[2][0] = self.plot[2].plot(pen='b')
-            self.curve[2][1] = self.plot[2].plot(pen='r')
+            self.plot[i] = self.win.addPlot(title="Raw EDA")
+            self.curve[i][0] = self.plot[i].plot(pen='b')
+            self.curve[i][1] = self.plot[i].plot(pen='r')
             self.win.nextRow()
+            i += 1
         if self.emg_flag == True:
-            self.plot[3] = self.win.addPlot(title="Raw EMG")
-            self.curve[3][0] = self.plot[3].plot(pen='b')
-            self.curve[3][1] = self.plot[3].plot(pen='r')
+            self.plot[i] = self.win.addPlot(title="Raw EMG")
+            self.curve[i][0] = self.plot[i].plot(pen='b')
+            self.curve[i][1] = self.plot[i].plot(pen='r')
 
     # init func for bar graph plot
     def bar_init(self, analysis_type):
@@ -57,22 +88,19 @@ class PlotGraph(QtWidgets.QMainWindow):
 
         # creating a plot window
         self.plot = pg.plot()
+        #self.plot.close = self.close
         self.plot.setYRange(0, 100)
         self.plot.setWindowTitle('Matching score (cross correlation)')
-        
+        self.plot.setBackground('w')
+
         self.x = range(self.channelnum)
         self.corr = [0 for i in range(self.channelnum)]
+        self.rr = [0 for i in range(self.channelnum)]
+        self.det = [0 for i in range(self.channelnum)]
 
         # setting x labels    
-        xlab_options = ['eeg','ecg','eda','emg']
-        xlab = []
-        i = 0
-        for flag in [self.eeg_flag, self.ecg_flag, self.eda_flag, self.emg_flag]:
-            if flag == True:
-                xlab.append(xlab_options[i])
-            i += 1
         ticks=[]
-        for i, item in enumerate(xlab):
+        for i, item in enumerate(self.channellist):
             ticks.append( (self.x[i], item) )
         ticks = [ticks]
 
@@ -82,22 +110,55 @@ class PlotGraph(QtWidgets.QMainWindow):
         self.bargraph = pg.BarGraphItem(x = self.x, height = self.corr, width = 0.6, brush ='r')
 
         self.plot.addItem(self.bargraph)
+
+        ## log file name
+        now = datetime.datetime.now()
+        myroot = 'data-sync'
+        os.makedirs(myroot, exist_ok=True)
+        if self.analysis_type == 'Cross Correlation':
+            snow = now.strftime('sync-cc-%y%m%d-%H%M')
+        else:
+            snow = now.strftime('sync-crqa-%y%m%d-%H%M')
+        sync_fname = "%s/%s.csv" % (myroot, snow)
+
+        with open(sync_fname, "a") as f:
+            f.write(self.channeltitlelist)
         
     # update the graph
     def update_raw_graph(self):
+        t = copy.deepcopy(self.timelist)
+        s = copy.deepcopy(self.signals)
         for i in range(self.channelnum):
             for j in range(2):
-                self.curve[i][j].setData(x=self.timelist[i][j], y=self.signals[i][j])
+                self.curve[i][j].setData(x=t[i][j], y=s[i][j])
     
     def update_bar_graph(self):
-        if self.analysis_type == 'Cross Correlation':
-            for i in range(self.channelnum):
-                self.corr[i] = 100 * cross_correlation(self.timelist[i][0], self.timelist[i][1], self.signals[i][0], self.signals[i][1])
-            self.plot.removeItem(self.bargraph)
-            self.bargraph = pg.BarGraphItem(x = self.x, height = self.corr, width = 0.6, brush ='r')
-            self.plot.addItem(self.bargraph)
+        t = copy.deepcopy(self.timelist)
+        s = copy.deepcopy(self.signals)
+        tnow = datetime.datetime.now()
+        record = str(tnow) + ','
 
-    def closeEvent(self, event):
+        if len(t[0][0]) >= 100 and len(t[0][1] >= 100):
+            if self.analysis_type == 'Cross Correlation':
+                for i in range(self.channelnum):
+                    self.corr[i] = 100 * cross_correlation(t[i][0], t[i][1], s[i][0], s[i][1])
+                corr_str = ','.join(map(str, self.corr))
+                with open(sync_fname, "a") as f:
+                    f.write(record + corr_str + '\n')
+                self.plot.removeItem(self.bargraph)
+                self.bargraph = pg.BarGraphItem(x = self.x, height = self.corr, width = 0.6, brush ='r')
+                self.plot.addItem(self.bargraph)
+            else:
+                for i in range(self.channelnum):
+                    self.rr, self.det = 100 * cross_recurrence(t[i][0], t[i][1], s[i][0], s[i][1])
+                rr_str = ','.join(map(str, self.rr))
+                det_str = ','.join(map(str, self.det))
+                with open(sync_fname, "a") as f:
+                    f.write(record + rr_str + '\n')
+                self.plot.removeItem(self.bargraph)
+                self.bargraph = pg.BarGraphItem(x = self.x, height = self.rr, width = 0.6, brush ='r')
+                self.plot.addItem(self.bargraph)
+    def close(self):
         sys.exit(0)
 
 def aligntimerange (t1, t2, s1, s2):
@@ -172,3 +233,29 @@ def cross_correlation (t1, t2, s1, s2):
         return corr_max
     else:
         return 0
+
+def cross_recurrence (t1, t2, s1, s2):
+    if s1 != [] and s2 != []:
+        t1, t2, s1, s2 = aligntimerange(t1, t2, s1, s2)
+        time_series_1 = TimeSeries(s1,
+                           embedding_dimension=2,
+                           time_delay=1)
+        time_series_2 = TimeSeries(s2,
+                           embedding_dimension=2,
+                           time_delay=1)
+        time_series = (time_series_1,
+               time_series_2)
+        settings = Settings(time_series,
+                            analysis_type=Cross,
+                            neighbourhood=FixedRadius(0.73),
+                            similarity_measure=EuclideanMetric,
+                            theiler_corrector=0)
+        computation = RQAComputation.create(settings,
+                                            verbose=True)
+        result = computation.run()
+        result.min_diagonal_line_length = 2
+        result.min_vertical_line_length = 2
+        result.min_white_vertical_line_length = 2
+        return result.recurrence_points, result.determinism
+    else:
+        return 0, 0
