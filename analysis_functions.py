@@ -15,7 +15,6 @@ from pyrqa.neighbourhood import FixedRadius
 from pyrqa.metric import EuclideanMetric
 from pyrqa.computation import RQAComputation
 
-sync_fname = ''
 
 class PlotGraph(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -113,15 +112,15 @@ class PlotGraph(QtWidgets.QMainWindow):
 
         ## log file name
         now = datetime.datetime.now()
-        myroot = 'data-sync'
+        myroot = 'data-server'
         os.makedirs(myroot, exist_ok=True)
         if self.analysis_type == 'Cross Correlation':
             snow = now.strftime('sync-cc-%y%m%d-%H%M')
         else:
             snow = now.strftime('sync-crqa-%y%m%d-%H%M')
-        sync_fname = "%s/%s.csv" % (myroot, snow)
+        self.sync_fname = "%s/%s.csv" % (myroot, snow)
 
-        with open(sync_fname, "a") as f:
+        with open(self.sync_fname, "a") as f:
             f.write(self.channeltitlelist)
         
     # update the graph
@@ -138,26 +137,30 @@ class PlotGraph(QtWidgets.QMainWindow):
         tnow = datetime.datetime.now()
         record = str(tnow) + ','
 
-        if len(t[0][0]) >= 100 and len(t[0][1] >= 100):
+        if len(t[0][0]) >= 100 and len(t[0][1]) >= 100:
             if self.analysis_type == 'Cross Correlation':
                 for i in range(self.channelnum):
                     self.corr[i] = 100 * cross_correlation(t[i][0], t[i][1], s[i][0], s[i][1])
                 corr_str = ','.join(map(str, self.corr))
-                with open(sync_fname, "a") as f:
+                with open(self.sync_fname, "a") as f:
                     f.write(record + corr_str + '\n')
                 self.plot.removeItem(self.bargraph)
                 self.bargraph = pg.BarGraphItem(x = self.x, height = self.corr, width = 0.6, brush ='r')
                 self.plot.addItem(self.bargraph)
             else:
                 for i in range(self.channelnum):
-                    self.rr, self.det = 100 * cross_recurrence(t[i][0], t[i][1], s[i][0], s[i][1])
+                    result = cross_recurrence(t[i][0], t[i][1], s[i][0], s[i][1])
+                    self.rr[i] = float(result[0]) * 100
+                    self.det[i] = float(result[1]) * 100
+                print(self.rr)
                 rr_str = ','.join(map(str, self.rr))
                 det_str = ','.join(map(str, self.det))
-                with open(sync_fname, "a") as f:
+                with open(self.sync_fname, "a") as f:
                     f.write(record + rr_str + '\n')
                 self.plot.removeItem(self.bargraph)
                 self.bargraph = pg.BarGraphItem(x = self.x, height = self.rr, width = 0.6, brush ='r')
                 self.plot.addItem(self.bargraph)
+        
     def close(self):
         sys.exit(0)
 
@@ -256,6 +259,7 @@ def cross_recurrence (t1, t2, s1, s2):
         result.min_diagonal_line_length = 2
         result.min_vertical_line_length = 2
         result.min_white_vertical_line_length = 2
-        return result.recurrence_points, result.determinism
+        print(result.recurrence_rate, result.determinism)
+        return result.recurrence_rate, result.determinism
     else:
         return 0, 0

@@ -1,13 +1,11 @@
+from matplotlib.pyplot import plot
 import socketio
 import threading
 from PyQt5 import QtCore, QtGui, QtWidgets
-from trimesh import Trimesh
 import sys
 import time
 
-import eeg
 import bitalino
-import analysis_functions as af
 
 sio = socketio.Client()
 hostip = ''
@@ -18,13 +16,19 @@ ecg_flag = False
 eeg_flag = False
 eda_flag = False
 emg_flag = False
-focuscalm_flag = False
-bitalino_flag = False
+vis_type = ''
+analysis_type = ''
 
 # Define the MAC-address of the acquisition device used in OpenSignals
 mac_address = ''
 
-t1 = threading.Thread(target=eeg.tcpip_eeg_init)
+def socket_connect():
+    global sio, hostip, port
+    sio.connect('http://' + hostip + ':'+ str(port))
+
+t1 = threading.Thread(target = socket_connect)
+
+app = QtWidgets.QApplication(sys.argv)
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -55,20 +59,17 @@ class Ui_Form(object):
         self.lineEdit_port.setGeometry(QtCore.QRect(220, 300, 113, 21))
         self.lineEdit_port.setObjectName("lineEdit_port")
         self.MACaddress = QtWidgets.QLabel(Form)
-        self.MACaddress.setEnabled(False)
+        self.MACaddress.setEnabled(True)
         self.MACaddress.setGeometry(QtCore.QRect(30, 100, 151, 16))
         self.MACaddress.setObjectName("MACaddress")
         self.lineEdit_MACaddress = QtWidgets.QLineEdit(Form)
-        self.lineEdit_MACaddress.setEnabled(False)
+        self.lineEdit_MACaddress.setEnabled(True)
         self.lineEdit_MACaddress.setGeometry(QtCore.QRect(30, 120, 181, 21))
         self.lineEdit_MACaddress.setText("")
         self.lineEdit_MACaddress.setObjectName("lineEdit_MACaddress")
-        self.checkBox_FocusCalm = QtWidgets.QCheckBox(Form)
-        self.checkBox_FocusCalm.setGeometry(QtCore.QRect(30, 40, 101, 20))
-        self.checkBox_FocusCalm.setObjectName("checkBox_FocusCalm")
-        self.checkBox_BITalino = QtWidgets.QCheckBox(Form)
-        self.checkBox_BITalino.setGeometry(QtCore.QRect(30, 60, 101, 20))
-        self.checkBox_BITalino.setObjectName("checkBox_BITalino")
+        self.BITalino = QtWidgets.QLabel(Form)
+        self.BITalino.setGeometry(QtCore.QRect(30, 40, 101, 30))
+        self.BITalino.setObjectName("BITalino")
         self.HostIP = QtWidgets.QLabel(Form)
         self.HostIP.setGeometry(QtCore.QRect(30, 280, 81, 16))
         self.HostIP.setObjectName("HostIP")
@@ -82,8 +83,6 @@ class Ui_Form(object):
         self.buttonBox.setObjectName("buttonBox")
 
         self.retranslateUi(Form)
-        self.checkBox_FocusCalm.clicked['bool'].connect(Form.setFocusCalmflag)
-        self.checkBox_BITalino.clicked['bool'].connect(Form.setBITalinoflag)
         self.lineEdit_MACaddress.textEdited['QString'].connect(Form.setMACaddress)
         self.checkBox_eeg.clicked['bool'].connect(Form.setEEGflag)
         self.checkBox_ecg.clicked['bool'].connect(Form.setECGflag)
@@ -94,8 +93,6 @@ class Ui_Form(object):
         self.buttonBox.accepted.connect(Form.close)
         self.buttonBox.accepted.connect(Form.init)
         self.buttonBox.rejected.connect(Form.close)
-        self.checkBox_BITalino.clicked['bool'].connect(self.lineEdit_MACaddress.setEnabled)
-        self.checkBox_BITalino.clicked['bool'].connect(self.MACaddress.setEnabled)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -110,8 +107,7 @@ class Ui_Form(object):
         self.PortNumber.setText(_translate("Form", "Port Number"))
         self.lineEdit_port.setText(_translate("Form", "3030"))
         self.MACaddress.setText(_translate("Form", "MAC address of BITalino"))
-        self.checkBox_FocusCalm.setText(_translate("Form", "FocusCalm"))
-        self.checkBox_BITalino.setText(_translate("Form", "BITalino"))
+        self.BITalino.setText(_translate("Form", "BITalino"))
         self.HostIP.setText(_translate("Form", "Host IP"))
 
 class gui(QtWidgets.QDialog):
@@ -119,20 +115,6 @@ class gui(QtWidgets.QDialog):
         super(gui, self).__init__(parent)
         self.ui = Ui_Form()
         self.ui.setupUi(self)     
-
-    def setFocusCalmflag(self):
-        global focuscalm_flag
-        if focuscalm_flag == False:
-            focuscalm_flag = True
-        else:
-            focuscalm_flag = False
-
-    def setBITalinoflag(self):
-        global bitalino_flag
-        if bitalino_flag == False:
-            bitalino_flag = True
-        else:
-            bitalino_flag = False
 
     def setMACaddress(self):
         global mac_address
@@ -175,23 +157,20 @@ class gui(QtWidgets.QDialog):
         port = int(str(self.ui.lineEdit_port.text()))
 
     def init(self):
-        global sio, hostip, port, focuscalm_flag, bitalino_flag, t1, mac_address
+        global sio, hostip, port, focuscalm_flag, bitalino_flag, t1, mac_address, plot_graph
         print('http://' + hostip + ':'+ str(port))
-        sio.connect('http://' + hostip + ':'+ str(port))
-        if focuscalm_flag == True:
-            t1.start()
-        if bitalino_flag == True:
-            t2= threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1', mac_address))
-            t2.start()
+        t1.start()
+
+        t2= threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1', mac_address, eeg_flag, ecg_flag, eda_flag, emg_flag))
+        t2.start()
+
+window = gui()
+window.show()
 
 @sio.event
 def connect():
     print('connection established')
 
-@sio.event
-def my_message(data):
-    print('message received with ', data)
-        
 @sio.event
 def connect_error(data):
     print("The connection failed!")
@@ -201,8 +180,4 @@ def disconnect():
     print('disconnected from server')
 
 if __name__ == '__main__':
-    app_dialog = QtWidgets.QApplication(sys.argv)
-    window = gui()
-    window.show()
-
-    app_dialog.exec()
+    app.exec()

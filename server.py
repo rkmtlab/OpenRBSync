@@ -6,6 +6,8 @@ import sys
 from PyQt5 import QtWidgets, QtCore
 from engineio.payload import Payload
 import pyqtgraph as pg
+from PyQt5 import QtCore, QtGui, QtWidgets
+import os
 
 # own module
 import analysis_functions as af
@@ -21,6 +23,8 @@ vis_type = None
 analysis_type = 'Cross Correlation'
 port = 3030
 
+p1_fname = ''
+p2_fname = ''
 
 # create plot area
 app = QtWidgets.QApplication(sys.argv)
@@ -33,8 +37,6 @@ def receive_forever():
 
 # serve in another thread
 t_server = threading.Thread(target=receive_forever)
-
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -274,19 +276,29 @@ app = socketio.WSGIApp(sio, static_files={
 # called when a client is connected
 @sio.event
 def connect(sid, environ):
+    global plot_graph, p1_fname, p2_fname
     print('connect ', sid)
-    plotmethod = {'vis_type':vis_type, 'analysis_type':analysis_type}
-    sio.emit('my_message', plotmethod)
+    
+    ## log file name
+    now = datetime.datetime.now()
+    myroot = 'data-server'
+    os.makedirs(myroot, exist_ok=True)
+    snow1 = now.strftime('p1-%y%m%d-%H%M')
+    snow2 = now.strftime('p2-%y%m%d-%H%M')
+    p1_fname = "%s/%s.csv" % (myroot, snow1)
+    p2_fname = "%s/%s.csv" % (myroot, snow2)
+
 
 # called when socketio receives data
 @sio.on('my message')
 def my_message(sid, data):
-    global plot_graph
+    global plot_graph, p1_fname, p2_fname
     idxp = 0
     idxs = 0
 
     timestamp_ux = data['timestamp']
     timestamp_dt = datetime.datetime.fromtimestamp(timestamp_ux)
+    write_data = str(timestamp_dt)
     if data['person'] == 'p1':
         idxp = 0
     if data['person'] == 'p2':
@@ -297,9 +309,17 @@ def my_message(sid, data):
             plot_graph.signals[idxs][idxp].append(data[key])
             plot_graph.timelist[idxs][idxp].append(timestamp_ux)
 
-            if len(plot_graph.signals[idxs][idxp]) > 1000:
-                plot_graph.signals[idxs][idxp] = plot_graph.signals[idxs][idxp][-1000:]
-                plot_graph.timelist[idxs][idxp] = plot_graph.timelist[idxs][idxp][-1000:]
+            if len(plot_graph.signals[idxs][idxp]) > 500:
+                plot_graph.signals[idxs][idxp] = plot_graph.signals[idxs][idxp][-500:]
+                plot_graph.timelist[idxs][idxp] = plot_graph.timelist[idxs][idxp][-500:]
+        write_data += ',' + str(data[key])
+    write_data += '\n'
+    if idxp == 0:
+        with open(p1_fname, "a") as f:
+            f.write(write_data)
+    elif idxp == 1:
+        with open(p2_fname, "a") as f:
+            f.write(write_data)
 
 # called when a client is disconnected
 @sio.event

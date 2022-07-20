@@ -13,13 +13,20 @@ eda=[]
 
 # Please update the channel number and sensor types (according to channel order)
 channeln = 1
-channels = ['ecg','eda']
 
-def bitalino_handler(sio, person, mac_address):
-    global eeg, ecg, emg, eda, channels, bitalino_fname
+def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg_flag):
+    global eeg, ecg, emg, eda, bitalino_fname
+
+    channeloptions = ['eeg', 'ecg', 'eda', 'emg']
+    channels = []
+    i = 0
+
+    for flag in [eeg_flag, ecg_flag, eda_flag, emg_flag]:
+        if flag == True:
+            channels.append(channeloptions[i])
+        i += 1
 
     print("# Looking for an available OpenSignals stream from the specified device...")
-    print(mac_address)
     os_stream = resolve_stream("type", mac_address)
 
     # Create an inlet to receive signal samples from the stream
@@ -44,6 +51,9 @@ def bitalino_handler(sio, person, mac_address):
     with open(bitalino_fname, "a") as f:
         f.write(channeltitlelist)
 
+    corrected = [0, 0, 0, 0]
+    a = 0.8
+
     while True:
         channeldata = [None for i in channels]
 
@@ -59,7 +69,10 @@ def bitalino_handler(sio, person, mac_address):
             channeldatastrlist += '%s'%datetime.datetime.fromtimestamp(timestamp) + ','
             for s in channels:
                 idx = channels.index(s)
-                channeldata[idx] = samples[idx+1]
+                corrected[idx] = a * corrected[idx] + (1-a) * samples[idx+1]
+                channeldata[idx] = corrected[idx]
+                #channeldata[idx] = samples[idx+1]
+
                 channeldatastr = '%s'%str(channeldata[idx])
                 channeldata_send.update([(s,channeldata[idx])])
                 if s != channels[-1]:
