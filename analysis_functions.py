@@ -54,7 +54,7 @@ class PlotGraph(QtWidgets.QMainWindow):
     # init func for raw signal plot
     def raw_init(self):
         self.win = pg.GraphicsLayoutWidget(show=True, title="Raw signals")
-        self.win.resize(600, 800)
+        self.win.resize(800, 800)
         self.win.setWindowTitle('Plotting')
         self.win.setBackground('w')
         #self.win.close = self.close

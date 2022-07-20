@@ -15,45 +15,15 @@ eda=[]
 channeln = 1
 channels = ['ecg','eda']
 
-def bitalino_init(mac_address):
-    '''
-    mac_address - mac address of your bitalino device
-    before using this function, please enable live streaming in OpenSignals setting
-    '''
-    global inlet, bitalino_fname, eeg, ecg, emg, eda
-    # Resolve stream
+def bitalino_handler(sio, person, mac_address):
+    global eeg, ecg, emg, eda, channels, bitalino_fname
+
     print("# Looking for an available OpenSignals stream from the specified device...")
+    print(mac_address)
     os_stream = resolve_stream("type", mac_address)
 
     # Create an inlet to receive signal samples from the stream
     inlet = StreamInlet(os_stream[0], recover = False)
-
-    # Get information about the stream
-    stream_info = inlet.info()
-
-    # Get individual attributes
-    stream_n_channels = stream_info.channel_count()
-
-    # Store sensor channel info & units in dictionary
-    stream_channels = dict()
-    channels = stream_info.desc().child("channels").child("channel")
-
-    # Loop through all available channels
-    for i in range(stream_n_channels):
-        # Get the channel number (e.g. 1)
-        channel = i + 1
-
-        # Get the channel type (e.g. ECG)
-        sensor = channels.child_value("sensor")
-
-        # Get the channel unit (e.g. mV)
-        unit = channels.child_value("unit")
-
-        # Store the information in the stream_channels dictionary
-        stream_channels.update({channel: [sensor, unit]})
-        channels = channels.next_sibling()
-
-    #print(stream_n_channels,stream_channels, channels)
 
     ## log file name
     now = datetime.datetime.now()
@@ -61,9 +31,6 @@ def bitalino_init(mac_address):
     os.makedirs(myroot, exist_ok=True)
     snow = now.strftime('bitalino-%y%m%d-%H%M')
     bitalino_fname = "%s/%s.csv" % (myroot, snow)
-
-def bitalino_handler(sio, person):
-    global bitalino_fname, eeg, ecg, emg, eda, channels
 
     # write sensor types as titles of each column
     channeltitlelist = ''
@@ -113,7 +80,7 @@ def bitalino_handler(sio, person):
             with open(bitalino_fname, "a") as f:
                 f.write(channeldatastrlist)
 
-            print(channeldata_send)
+            #print(channeldata_send)
 
             if len(eeg) > 1000:
                 eeg = eeg[-1000:]

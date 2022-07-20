@@ -3,14 +3,13 @@ import threading
 from PyQt5 import QtCore, QtGui, QtWidgets
 from trimesh import Trimesh
 import sys
+import time
 
 import eeg
 import bitalino
+import analysis_functions as af
 
 sio = socketio.Client()
-#hostip = '10.209.30.44'
-#hostip = '172.27.254.84'
-#hostip = '192.168.3.10'
 hostip = ''
 port = 3030
 
@@ -23,11 +22,9 @@ focuscalm_flag = False
 bitalino_flag = False
 
 # Define the MAC-address of the acquisition device used in OpenSignals
-#mac_address = "98:D3:C1:FD:2F:9E"
 mac_address = ''
 
 t1 = threading.Thread(target=eeg.tcpip_eeg_init)
-t2 = threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1'))
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -139,7 +136,7 @@ class gui(QtWidgets.QDialog):
 
     def setMACaddress(self):
         global mac_address
-        mac_address = str(self.ui.MACaddress.text())
+        mac_address = str(self.ui.lineEdit_MACaddress.text())
 
     def setEEGflag(self):
         global eeg_flag
@@ -178,13 +175,13 @@ class gui(QtWidgets.QDialog):
         port = int(str(self.ui.lineEdit_port.text()))
 
     def init(self):
-        global sio, hostip, port, focuscalm_flag, bitalino_flag, t1, t2
+        global sio, hostip, port, focuscalm_flag, bitalino_flag, t1, mac_address
         print('http://' + hostip + ':'+ str(port))
         sio.connect('http://' + hostip + ':'+ str(port))
         if focuscalm_flag == True:
             t1.start()
         if bitalino_flag == True:
-            bitalino.bitalino_init(mac_address)
+            t2= threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1', mac_address))
             t2.start()
 
 @sio.event
@@ -194,8 +191,7 @@ def connect():
 @sio.event
 def my_message(data):
     print('message received with ', data)
-    sio.emit('my response', {'response': 'my response'})
-
+        
 @sio.event
 def connect_error(data):
     print("The connection failed!")
