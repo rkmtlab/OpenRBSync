@@ -9,8 +9,10 @@ import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
 import os
 
+from sympy import timed
+
 # own module
-import analysis_functions as af
+import plot_analysis_functions as paf
 
 # define maximum packets in payload
 Payload.max_decode_packets = 50
@@ -22,13 +24,16 @@ emg_flag = False
 vis_type = None
 analysis_type = 'Cross Correlation'
 port = 3030
+timedelay_p1 = 1
+timedelay_p2 = 1
+embedding_dimension = 1
 
 p1_fname = ''
 p2_fname = ''
 
 # create plot area
 app = QtWidgets.QApplication(sys.argv)
-plot_graph = af.PlotGraph()
+plot_graph = paf.PlotGraph()
 timer = QtCore.QTimer()
 
 
@@ -140,6 +145,9 @@ class Ui_Form(object):
         self.comboBox_analysis.currentIndexChanged['QString'].connect(Form.setAnalysis)
         self.comboBox_analysis.currentIndexChanged['QString'].connect(Form.showORhide)   
         self.comboBox_analysis.currentIndexChanged['QString'].connect(self.comboBox_analysis.show)
+        self.lineedit_p1.textEdited['QString'].connect(Form.setP1delay)
+        self.lineedit_p2.textEdited['QString'].connect(Form.setP2delay)
+        self.lineedit_embeddingdimension.textEdited['QString'].connect(Form.setEmbeddingDimension)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -164,7 +172,7 @@ class Ui_Form(object):
         self.txt_p1.setText(_translate("Form", "p1"))
         self.txt_p2.setText(_translate("Form", "p2"))
         self.txt_embeddingdimension.setText(_translate("Form", "Embedding dimension"))
-        self.lineedit_embeddingdimension.setText(_translate("Form", "2"))
+        self.lineedit_embeddingdimension.setText(_translate("Form", "1"))
 
 
 # functions to implement when actions are taken in the dialog
@@ -243,10 +251,22 @@ class gui(QtWidgets.QDialog):
             self.ui.txt_timedelay.setVisible(False)
             self.ui.lineedit_embeddingdimension.setVisible(False)
 
+    def setP1delay(self):
+        global timedelay_p1
+        timedelay_p1 = int(str(self.ui.lineedit_p1.text()))
+    
+    def setP2delay(self):
+        global timedelay_p2
+        timedelay_p2 = int(str(self.ui.lineedit_p2.text()))
+
+    def setEmbeddingDimension(self):
+        global embedding_dimension
+        embedding_dimension = int(str(self.ui.lineedit_embeddingdimension.text()))
+
     def init(self):
         global vis_type, plot_graph, timer, t_server, analysis_type
-        global eeg_flag, ecg_flag, eda_flag, emg_flag
-        plot_graph.set_parameters(eeg_flag, ecg_flag, eda_flag, emg_flag)
+        global eeg_flag, ecg_flag, eda_flag, emg_flag, timedelay_p1, timedelay_p2, embedding_dimension
+        plot_graph.set_parameters(eeg_flag, ecg_flag, eda_flag, emg_flag, timedelay_p1, timedelay_p2, embedding_dimension)
         if vis_type == 'off':
             pass
         elif vis_type == 'raw':
@@ -268,7 +288,7 @@ window = gui()
 window.show()
 
 # create socket server
-sio = socketio.Server()
+sio = socketio.Server(ping_interval=5, ping_timeout=1000)
 app = socketio.WSGIApp(sio, static_files={
     '/': {'content_type': 'text/html', 'filename': 'index.html'}
 })
@@ -278,7 +298,7 @@ app = socketio.WSGIApp(sio, static_files={
 def connect(sid, environ):
     global plot_graph, p1_fname, p2_fname
     print('connect ', sid)
-    
+
     ## log file name
     now = datetime.datetime.now()
     myroot = 'data-server'
@@ -288,6 +308,15 @@ def connect(sid, environ):
     p1_fname = "%s/%s.csv" % (myroot, snow1)
     p2_fname = "%s/%s.csv" % (myroot, snow2)
 
+    index = 'timestamp, person'
+    for channel in plot_graph.channellist:
+        index += ',' + channel
+    index += '\n'
+
+    with open(p1_fname, "a") as f1:
+            f1.write(index)
+    with open(p2_fname, "a") as f2:
+            f2.write(index)
 
 # called when socketio receives data
 @sio.on('my message')
@@ -311,15 +340,17 @@ def my_message(sid, data):
 
             if len(plot_graph.signals[idxs][idxp]) > 500:
                 plot_graph.signals[idxs][idxp] = plot_graph.signals[idxs][idxp][-500:]
+            if len(plot_graph.timelist[idxs][idxp]) > 500:
                 plot_graph.timelist[idxs][idxp] = plot_graph.timelist[idxs][idxp][-500:]
-        write_data += ',' + str(data[key])
+        if key != 'timestamp':
+            write_data += ',' + str(data[key])
     write_data += '\n'
     if idxp == 0:
-        with open(p1_fname, "a") as f:
-            f.write(write_data)
+        with open(p1_fname, "a") as f1:
+            f1.write(write_data)
     elif idxp == 1:
-        with open(p2_fname, "a") as f:
-            f.write(write_data)
+        with open(p2_fname, "a") as f2:
+            f2.write(write_data)
 
 # called when a client is disconnected
 @sio.event

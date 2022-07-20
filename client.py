@@ -6,10 +6,10 @@ import sys
 import time
 
 import bitalino
+import timesync
 
 sio = socketio.Client()
-hostip = ''
-port = 3030
+hostlink = ''
 
 # signal flags
 ecg_flag = False
@@ -23,8 +23,8 @@ analysis_type = ''
 mac_address = ''
 
 def socket_connect():
-    global sio, hostip, port
-    sio.connect('http://' + hostip + ':'+ str(port))
+    global sio, hostlink
+    sio.connect(hostlink)
 
 t1 = threading.Thread(target = socket_connect)
 
@@ -52,12 +52,6 @@ class Ui_Form(object):
         self.checkBox_emg = QtWidgets.QCheckBox(Form)
         self.checkBox_emg.setGeometry(QtCore.QRect(30, 240, 86, 20))
         self.checkBox_emg.setObjectName("checkBox_emg")
-        self.PortNumber = QtWidgets.QLabel(Form)
-        self.PortNumber.setGeometry(QtCore.QRect(220, 280, 81, 16))
-        self.PortNumber.setObjectName("PortNumber")
-        self.lineEdit_port = QtWidgets.QLineEdit(Form)
-        self.lineEdit_port.setGeometry(QtCore.QRect(220, 300, 113, 21))
-        self.lineEdit_port.setObjectName("lineEdit_port")
         self.MACaddress = QtWidgets.QLabel(Form)
         self.MACaddress.setEnabled(True)
         self.MACaddress.setGeometry(QtCore.QRect(30, 100, 151, 16))
@@ -70,13 +64,13 @@ class Ui_Form(object):
         self.BITalino = QtWidgets.QLabel(Form)
         self.BITalino.setGeometry(QtCore.QRect(30, 40, 101, 30))
         self.BITalino.setObjectName("BITalino")
-        self.HostIP = QtWidgets.QLabel(Form)
-        self.HostIP.setGeometry(QtCore.QRect(30, 280, 81, 16))
-        self.HostIP.setObjectName("HostIP")
-        self.lineEdit_ip = QtWidgets.QLineEdit(Form)
-        self.lineEdit_ip.setGeometry(QtCore.QRect(30, 300, 113, 21))
-        self.lineEdit_ip.setText("")
-        self.lineEdit_ip.setObjectName("lineEdit_ip")
+        self.HostLink = QtWidgets.QLabel(Form)
+        self.HostLink.setGeometry(QtCore.QRect(30, 280, 81, 16))
+        self.HostLink.setObjectName("HostLink")
+        self.lineEdit_link = QtWidgets.QLineEdit(Form)
+        self.lineEdit_link.setGeometry(QtCore.QRect(30, 300, 181, 21))
+        self.lineEdit_link.setText("")
+        self.lineEdit_link.setObjectName("lineEdit_ip")
         self.buttonBox = QtWidgets.QDialogButtonBox(Form)
         self.buttonBox.setGeometry(QtCore.QRect(110, 350, 164, 32))
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
@@ -88,8 +82,7 @@ class Ui_Form(object):
         self.checkBox_ecg.clicked['bool'].connect(Form.setECGflag)
         self.checkBox_eda.clicked['bool'].connect(Form.setEDAflag)
         self.checkBox_emg.clicked['bool'].connect(Form.setEMGflag)
-        self.lineEdit_ip.textEdited['QString'].connect(Form.setHostIP)
-        self.lineEdit_port.textEdited['QString'].connect(Form.setPortNumber)
+        self.lineEdit_link.textEdited['QString'].connect(Form.setHostLink)
         self.buttonBox.accepted.connect(Form.close)
         self.buttonBox.accepted.connect(Form.init)
         self.buttonBox.rejected.connect(Form.close)
@@ -104,11 +97,9 @@ class Ui_Form(object):
         self.checkBox_ecg.setText(_translate("Form", "ECG"))
         self.checkBox_eda.setText(_translate("Form", "EDA"))
         self.checkBox_emg.setText(_translate("Form", "EMG"))
-        self.PortNumber.setText(_translate("Form", "Port Number"))
-        self.lineEdit_port.setText(_translate("Form", "3030"))
         self.MACaddress.setText(_translate("Form", "MAC address of BITalino"))
         self.BITalino.setText(_translate("Form", "BITalino"))
-        self.HostIP.setText(_translate("Form", "Host IP"))
+        self.HostLink.setText(_translate("Form", "Host Link"))
 
 class gui(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -148,17 +139,14 @@ class gui(QtWidgets.QDialog):
         else:
             emg_flag = False
 
-    def setHostIP(self):
-        global hostip
-        hostip = str(self.ui.lineEdit_ip.text())
-
-    def setPortNumber(self):
-        global port
-        port = int(str(self.ui.lineEdit_port.text()))
+    def setHostLink(self):
+        global hostlink
+        hostlink = str(self.ui.lineEdit_link.text())
 
     def init(self):
-        global sio, hostip, port, focuscalm_flag, bitalino_flag, t1, mac_address, plot_graph
-        print('http://' + hostip + ':'+ str(port))
+        global sio, t1, mac_address
+        timesync.timesync()
+        
         t1.start()
 
         t2= threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1', mac_address, eeg_flag, ecg_flag, eda_flag, emg_flag))

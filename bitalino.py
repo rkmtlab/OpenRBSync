@@ -3,7 +3,7 @@ import datetime
 import os
 import time
 
-import timesync
+import timesync_nict
 
 bitalino_fname = ''
 eeg =[]
@@ -62,8 +62,8 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
             samples, timestamp = inlet.pull_sample()
 
             channeldatastrlist = ''
-            timestamp = time.time()
-            ntp_client = timesync.MyNTPClient('ntp.nict.jp')
+            timestamp = datetime.datetime.now().timestamp()
+            ntp_client = timesync_nict.MyNTPClient('ntp.nict.jp')
             timestamp = ntp_client.get_nowtime()
             channeldata_send = {'person':person,'timestamp':timestamp}
             channeldatastrlist += '%s'%datetime.datetime.fromtimestamp(timestamp) + ','
@@ -71,7 +71,6 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
                 idx = channels.index(s)
                 corrected[idx] = a * corrected[idx] + (1-a) * samples[idx+1]
                 channeldata[idx] = corrected[idx]
-                #channeldata[idx] = samples[idx+1]
 
                 channeldatastr = '%s'%str(channeldata[idx])
                 channeldata_send.update([(s,channeldata[idx])])
@@ -93,8 +92,6 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
             with open(bitalino_fname, "a") as f:
                 f.write(channeldatastrlist)
 
-            #print(channeldata_send)
-
             if len(eeg) > 1000:
                 eeg = eeg[-1000:]
             if len(ecg) > 1000:
@@ -105,5 +102,6 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
                 eda = eda[-1000:]
             
             sio.emit('my message', channeldata_send)
+    
         except lost_error as e:
             os._exit(0)
