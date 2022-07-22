@@ -34,7 +34,7 @@ python server.py
     * An analysis method
 * Default parameters are set for port number and cross recurrence quantification analysis, but you can change them as you want.
 
-![demo](https://gyazo.com/8caf1e56f8684ccecd9a3bd0a463dd85)
+[![Image from Gyazo](https://i.gyazo.com/8caf1e56f8684ccecd9a3bd0a463dd85.gif)](https://gyazo.com/8caf1e56f8684ccecd9a3bd0a463dd85)
 
 * Open another terminal window, and run ngrok command.
 ```
@@ -43,7 +43,7 @@ ngrok http [port number you set in the gui dialog (default is 3030)]
 
 * Ngrok window will be showed up, so copy the link displayed. You should not close this ngrok window by the end of the data acquisition.
 
-![demo](https://gyazo.com/0e7eaa59cdb6a9e50e86b3e79160f9f5)
+[![Image from Gyazo](https://i.gyazo.com/0e7eaa59cdb6a9e50e86b3e79160f9f5.gif)](https://gyazo.com/0e7eaa59cdb6a9e50e86b3e79160f9f5)
 
 ### Running a client
 In each client PC, open OpenSignals and set up your BITalino.
@@ -51,15 +51,15 @@ In each client PC, open OpenSignals and set up your BITalino.
 
 * Launch OpenSignals, find your BITalino device, and enable it.
 
-![demo](https://gyazo.com/7a59c2a177f324d7823d66ad3e482d05)
+[![Image from Gyazo](https://i.gyazo.com/7a59c2a177f324d7823d66ad3e482d05.gif)](https://gyazo.com/7a59c2a177f324d7823d66ad3e482d05)
 
 * Click on the box and configure parameters.
 
-![demo](https://gyazo.com/c7fe8e0f0abdb3f015d5dca109997bdb)
+[![Image from Gyazo](https://i.gyazo.com/c7fe8e0f0abdb3f015d5dca109997bdb.gif)](https://gyazo.com/c7fe8e0f0abdb3f015d5dca109997bdb)
 
-* Click on the settin icon, go to the INTEGRATION tab, and enable Lab Streaming Layer.
+* Click on the setting icon, go to the INTEGRATION tab, and enable Lab Streaming Layer.
 
-![demo](https://gyazo.com/f00d35b0041f19150f9e148006e90149)
+[![Image from Gyazo](https://i.gyazo.com/f00d35b0041f19150f9e148006e90149.gif)](https://gyazo.com/f00d35b0041f19150f9e148006e90149)
 
 * Click the red button and start data acquisition.
 
@@ -71,8 +71,8 @@ python client.py
     * MAC address of your BITalino device you have selected on OpenSignals. (Written in the back side of the device / OpenSignals)
     * Signal types to send
     * Host link you get by ngrok command on your server computer
-
-![demo](https://gyazo.com/f4a0607344fff04fcd2c468187fcf215)
+    
+[![Image from Gyazo](https://i.gyazo.com/f4a0607344fff04fcd2c468187fcf215.gif)](https://gyazo.com/f4a0607344fff04fcd2c468187fcf215)
 
 # System configurations
 
