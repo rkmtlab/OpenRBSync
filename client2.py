@@ -1,9 +1,7 @@
-from matplotlib.pyplot import plot
 import socketio
 import threading
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 import sys
-import time
 
 import bitalino
 import timesync
