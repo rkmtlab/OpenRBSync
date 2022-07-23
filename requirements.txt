@@ -1,0 +1,15 @@
+eventlet==0.33.1
+gevent_socketio==0.3.6
+matplotlib==3.5.1
+netifaces==0.11.0
+ntplib==0.4.0
+numpy==1.19.2
+psutil==5.8.0
+pylsl==1.16.0
+PyQt5==5.15.7
+pyqtgraph==0.11.0
+PyRQA==8.0.0
+python_engineio==4.3.3
+python_osc==1.8.0
+scipy==1.5.1
+sympy==1.10.1
