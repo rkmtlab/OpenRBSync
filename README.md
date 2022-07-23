@@ -71,7 +71,7 @@ python client.py
 * In a GUI dialog, set appropriate parameters.
     * MAC address of your BITalino device you have selected on OpenSignals. (Written in the back side of the device / OpenSignals)
     * Signal types to send
-    * Host link you get by ngrok command on your server computer (Copy it from the row of Forwarding as shown in Running a server sedtion.)
+    * Host link you get by ngrok command on your server computer (Copy it from the row of Forwarding as shown in Running a server section.)
     
 [![Image from Gyazo](https://i.gyazo.com/f4a0607344fff04fcd2c468187fcf215.gif)](https://gyazo.com/f4a0607344fff04fcd2c468187fcf215)
 
