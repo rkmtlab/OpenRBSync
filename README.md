@@ -15,11 +15,13 @@ BITalino needs [OpenSignals](https://support.pluxbiosignals.com/knowledge-base/i
 
 OpenRBSync uses [ngrok](https://ngrok.com/) for tunneling. Please download following [here](https://ngrok.com/download).
 
-## Installing
+## Installation
 Run the following command and install OpenRBSync.
 ```
 git clone https://github.com/rkmtlab/OpenRBSync.git
 ```
+
+* Other required libraries are written in [requirements.txt](https://github.com/rkmtlab/OpenRBSync/blob/main/requirements.txt)
 
 ## Running the program
 
@@ -99,6 +101,7 @@ Receive data from sensors and send it to the server.
 ### sensor options
 
 1. bitalino (eeg, ecg, eda, emg)
+
 
 # Authors
 Yuna Watanabe, Kotaro Omori (The University of Tokyo)
