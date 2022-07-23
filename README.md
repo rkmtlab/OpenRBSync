@@ -98,5 +98,5 @@ Receive data from sensors and send it to the server.
 
 1. bitalino (eeg, ecg, eda, emg)
 
-### Authors
+# Authors
 Yuna Watanabe, Kotaro Omori (The University of Tokyo)
