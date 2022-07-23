@@ -12,6 +12,7 @@ We plan to increase the options of sensors in the near future.
 
 ### Software
 BITalino needs [OpenSignals](https://support.pluxbiosignals.com/knowledge-base/introducing-opensignals-revolution/), an official software to acquire signals from BITalino via Bluetooth. Please install this software beforehand.
+OpenRBSync uses [ngrok](https://ngrok.com/) for tunneling. Please download following [here](https://ngrok.com/download).
 
 ## Installing
 Run the following command and install OpenRBSync.
