@@ -9,36 +9,27 @@ import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
 import os
 
-from sympy import timed
-
 # own module
 import plot_analysis_functions as paf
 
-# define maximum packets in payload
-Payload.max_decode_packets = 50
-
-eeg_flag = False
-ecg_flag = False
-eda_flag = False
-emg_flag = False
-vis_type = None
-analysis_type = 'Cross Correlation'
 port = 3030
-timedelay_p1 = 1
-timedelay_p2 = 1
-embedding_dimension = 1
 
 p1_fname = ''
 p2_fname = ''
 
 # create plot area
-app = QtWidgets.QApplication(sys.argv)
+app_qt = QtWidgets.QApplication(sys.argv)
 plot_graph = paf.PlotGraph()
 timer = QtCore.QTimer()
 
+# create socket server
+sio = socketio.Server(ping_interval=5, ping_timeout=1000)
+app_soc = socketio.WSGIApp(sio, static_files={
+    '/': {'content_type': 'text/html', 'filename': 'index.html'}
+})
 
 def receive_forever():
-    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app)
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', port)), app_soc)
 
 # serve in another thread
 t_server = threading.Thread(target=receive_forever)
@@ -184,54 +175,55 @@ class gui(QtWidgets.QDialog):
         self.app_qt = None
         self.plot_graph = None
         self.t_server = None
+        self.eeg_flag = False
+        self.ecg_flag = False
+        self.eda_flag = False
+        self.emg_flag = False
+        self.vis_type = None
+        self.analysis_type = 'Cross Correlation'
+        self.timedelay_p1 = 1
+        self.timedelay_p2 = 1
+        self.embedding_dimension = 1
 
     def setEEGflag(self):
-        global eeg_flag
-        if eeg_flag == False:
-            eeg_flag = True
+        if self.eeg_flag == False:
+            self.eeg_flag = True
         else:
-            eeg_flag = False
+            self.eeg_flag = False
 
     def setECGflag(self):
-        global ecg_flag
-        if ecg_flag == False:
-            ecg_flag = True
+        if self.ecg_flag == False:
+            self.ecg_flag = True
         else:
-            ecg_flag = False
+            self.ecg_flag = False
 
     def setEDAflag(self):
-        global eda_flag
-        if eda_flag == False:
-            eda_flag = True
+        if self.eda_flag == False:
+            self.eda_flag = True
         else:
-            eda_flag = False
+            self.eda_flag = False
 
     def setEMGflag(self):
-        global emg_flag
-        if emg_flag == False:
-            emg_flag = True
+        if self.emg_flag == False:
+            self.emg_flag = True
         else:
-            emg_flag = False
+            self.emg_flag = False
     
     def setVis_off(self):
-        global vis_type
-        vis_type = 'off'
+        self.vis_type = 'off'
 
     def setVis_raw(self):
-        global vis_type
-        vis_type = 'raw'
+        self.vis_type = 'raw'
 
     def setVis_bar(self):
-        global vis_type
-        vis_type = 'bar'
+        self.vis_type = 'bar'
 
     def setPortNo(self):
         global port
         port = int(str(self.ui.port_no.text()))
 
     def setAnalysis(self):
-        global analysis_type
-        analysis_type = str(self.ui.comboBox_analysis.currentText())
+        self.analysis_type = str(self.ui.comboBox_analysis.currentText())
     
     def showORhide(self):
         if str(self.ui.comboBox_analysis.currentText()) == 'Cross Recurrence Quantification Analysis':
@@ -252,8 +244,7 @@ class gui(QtWidgets.QDialog):
             self.ui.lineedit_embeddingdimension.setVisible(False)
 
     def setP1delay(self):
-        global timedelay_p1
-        timedelay_p1 = int(str(self.ui.lineedit_p1.text()))
+        self.timedelay_p1 = int(str(self.ui.lineedit_p1.text()))
     
     def setP2delay(self):
         global timedelay_p2
@@ -264,34 +255,22 @@ class gui(QtWidgets.QDialog):
         embedding_dimension = int(str(self.ui.lineedit_embeddingdimension.text()))
 
     def init(self):
-        global vis_type, plot_graph, timer, t_server, analysis_type
-        global eeg_flag, ecg_flag, eda_flag, emg_flag, timedelay_p1, timedelay_p2, embedding_dimension
-        plot_graph.set_parameters(eeg_flag, ecg_flag, eda_flag, emg_flag, timedelay_p1, timedelay_p2, embedding_dimension)
-        if vis_type == 'off':
+        global plot_graph, timer, t_server
+        plot_graph.set_parameters(self.eeg_flag, self.ecg_flag, self.eda_flag, self.emg_flag, self.timedelay_p1, self.timedelay_p2, self.embedding_dimension)
+        if self.vis_type == 'off':
             pass
-        elif vis_type == 'raw':
+        elif self.vis_type == 'raw':
             plot_graph.raw_init()
-        elif vis_type == 'bar':
-            plot_graph.bar_init(analysis_type)
+        elif self.vis_type == 'bar':
+            plot_graph.bar_init(self.analysis_type)
         t_server.start()
 
-        if vis_type == 'raw':
+        if self.vis_type == 'raw':
             timer.timeout.connect(plot_graph.update_raw_graph)
             timer.start(50)
-        elif vis_type == 'bar':
+        elif self.vis_type == 'bar':
             timer.timeout.connect(plot_graph.update_bar_graph)
             timer.start(1000)
-
-# create setting dialog
-app = pg.mkQApp("Plotting Example")
-window = gui()
-window.show()
-
-# create socket server
-sio = socketio.Server(ping_interval=5, ping_timeout=1000)
-app = socketio.WSGIApp(sio, static_files={
-    '/': {'content_type': 'text/html', 'filename': 'index.html'}
-})
 
 # called when a client is connected
 @sio.event
@@ -359,5 +338,12 @@ def disconnect(sid):
 
 
 if __name__ == '__main__':
+    # create setting dialog
+    app_pg = pg.mkQApp("Plotting Example")
+    window = gui()
+    window.show()
+
+    # define maximum packets in payload
+    Payload.max_decode_packets = 50
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()

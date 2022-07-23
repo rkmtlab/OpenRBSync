@@ -12,4 +12,3 @@ PyRQA==8.0.0
 python_engineio==4.3.3
 python_osc==1.8.0
 scipy==1.5.1
-sympy==1.10.1

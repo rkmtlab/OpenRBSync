@@ -78,6 +78,14 @@ python client.py
     
 [![Image from Gyazo](https://i.gyazo.com/f4a0607344fff04fcd2c468187fcf215.gif)](https://gyazo.com/f4a0607344fff04fcd2c468187fcf215)
 
+### Quitting programs
+When you quit running programs, follow this order:
+1. Quit client.py and client2.py by entering ^C in the terminal window
+2. Click on the x button of the plotting window
+3. Quit server.py by entering ^C in the terminal window
+
+[![Image from Gyazo](https://i.gyazo.com/b715d073a1acd418f86621f902f62dd2.gif)](https://gyazo.com/b715d073a1acd418f86621f902f62dd2)
+
 # System configurations
 
 ## server.py

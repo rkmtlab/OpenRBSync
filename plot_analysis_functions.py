@@ -1,5 +1,4 @@
-from threading import Timer
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets
 import pyqtgraph as pg
 from statistics import mean
 import scipy.signal as sig
@@ -21,7 +20,6 @@ class PlotGraph(QtWidgets.QMainWindow):
         super(PlotGraph, self).__init__(*args, **kwargs)
 
     def set_parameters(self, eeg_flag, ecg_flag, eda_flag, emg_flag, timedelay_p1, timedelay_p2, embedding_dimension):
-        global sync_fname
         self.channelnum = 0
         channeloptions = ['eeg', 'ecg', 'eda', 'emg']
         self.channellist = []
@@ -56,6 +54,9 @@ class PlotGraph(QtWidgets.QMainWindow):
 
     # init func for raw signal plot
     def raw_init(self):
+        '''
+        init function called when the visualization type is raw
+        '''
         self.win = pg.GraphicsLayoutWidget(show=True, title="Raw signals")
         self.win.resize(800, 800)
         self.win.setWindowTitle('Plotting')
@@ -87,6 +88,10 @@ class PlotGraph(QtWidgets.QMainWindow):
 
     # init func for bar graph plot
     def bar_init(self, analysis_type):
+        '''
+        init function called when the visualization type is bar
+        '''
+
         self.analysis_type = analysis_type
 
         # creating a plot window
@@ -164,7 +169,6 @@ class PlotGraph(QtWidgets.QMainWindow):
                     result = cross_recurrence(t[i][0], t[i][1], s[i][0], s[i][1], self.timedelay_p1, self.timedelay_p2, self.embedding_dimension)
                     self.rr[i] = float(result[0]) * 100
                     self.det[i] = float(result[1]) * 100
-                print(self.rr)
                 rr_str = ','.join(map(str, self.rr))
                 det_str = ','.join(map(str, self.det))
                 with open(self.sync_fname, "a") as f:
@@ -241,8 +245,14 @@ def cross_correlation (t1, t2, s1, s2):
     '''
     if s1 != [] and s2 != []:
         t1, t2, s1, s2 = aligntimerange(t1, t2, s1, s2)
-        s1_norm = [x - mean(s1) for x in s1] / np.std(s1)
-        s2_norm = [x - mean(s2) for x in s2] / np.std(s2)
+        if np.std(s1) != 0:
+            s1_norm = [x - mean(s1) for x in s1] / np.std(s1)
+        else:
+            s1_norm = [x - mean(s1) for x in s1]
+        if np.std(s2) != 0:
+            s2_norm = [x - mean(s2) for x in s2] / np.std(s2)
+        else:
+            s2_norm = [x - mean(s2) for x in s2]
         corr = sig.correlate(s1_norm, s2_norm, mode = 'full') / min(len(s1), len(s2))
         corr_max = max(abs(corr))
         return corr_max
@@ -250,6 +260,13 @@ def cross_correlation (t1, t2, s1, s2):
         return 0
 
 def cross_recurrence (t1, t2, s1, s2, timedelay_p1, timedelay_p2, embedding_dimension):
+    '''
+    conduct cross recurrence quantification analysis of two time series data
+    t1, t2 - list of time for each person
+    s1, s2 - list of signals for each person
+    timedelay_p1, timedelay_p2 - time delay parameter to embed signals (default = 1)
+    embedding_dimension - embedding dimension parameter to embed signals (default = 1)
+    '''
     if s1 != [] and s2 != []:
         t1, t2, s1, s2 = aligntimerange(t1, t2, s1, s2)
         time_series_1 = TimeSeries(s1,
@@ -271,7 +288,6 @@ def cross_recurrence (t1, t2, s1, s2, timedelay_p1, timedelay_p2, embedding_dime
         result.min_diagonal_line_length = 2
         result.min_vertical_line_length = 2
         result.min_white_vertical_line_length = 2
-        print(result.recurrence_rate, result.determinism)
         return result.recurrence_rate, result.determinism
     else:
         return 0, 0

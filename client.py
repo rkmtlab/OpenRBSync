@@ -4,29 +4,15 @@ from PyQt5 import QtCore, QtWidgets
 import sys
 
 import bitalino
-import timesync
 
 sio = socketio.Client()
 hostlink = ''
-
-# signal flags
-ecg_flag = False
-eeg_flag = False
-eda_flag = False
-emg_flag = False
-vis_type = ''
-analysis_type = ''
-
-# Define the MAC-address of the acquisition device used in OpenSignals
-mac_address = ''
 
 def socket_connect():
     global sio, hostlink
     sio.connect(hostlink)
 
 t1 = threading.Thread(target = socket_connect)
-
-app = QtWidgets.QApplication(sys.argv)
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -103,55 +89,51 @@ class gui(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(gui, self).__init__(parent)
         self.ui = Ui_Form()
-        self.ui.setupUi(self)     
+        self.ui.setupUi(self) 
+        self.ecg_flag = False
+        self.eeg_flag = False
+        self.eda_flag = False
+        self.emg_flag = False 
+        self.mac_address = ''       
 
     def setMACaddress(self):
-        global mac_address
-        mac_address = str(self.ui.lineEdit_MACaddress.text())
+        self.mac_address = str(self.ui.lineEdit_MACaddress.text())
 
     def setEEGflag(self):
-        global eeg_flag
-        if eeg_flag == False:
-            eeg_flag = True
+        if self.eeg_flag == False:
+            self.eeg_flag = True
         else:
-            eeg_flag = False
+            self.eeg_flag = False
 
     def setECGflag(self):
-        global ecg_flag
-        if ecg_flag == False:
-            ecg_flag = True
+        if self.ecg_flag == False:
+            self.ecg_flag = True
         else:
-            ecg_flag = False
+            self.ecg_flag = False
 
     def setEDAflag(self):
-        global eda_flag
-        if eda_flag == False:
-            eda_flag = True
+        if self.eda_flag == False:
+            self.eda_flag = True
         else:
-            eda_flag = False
+            self.eda_flag = False
 
     def setEMGflag(self):
-        global emg_flag
-        if emg_flag == False:
-            emg_flag = True
+        if self.emg_flag == False:
+            self.emg_flag = True
         else:
-            emg_flag = False
+            self.emg_flag = False
 
     def setHostLink(self):
         global hostlink
         hostlink = str(self.ui.lineEdit_link.text())
 
     def init(self):
-        global sio, t1, mac_address
-        timesync.timesync()
+        global sio, t1
         
         t1.start()
 
-        t2= threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1', mac_address, eeg_flag, ecg_flag, eda_flag, emg_flag))
+        t2= threading.Thread(target = bitalino.bitalino_handler, args = (sio,'p1', self.mac_address, self.eeg_flag, self.ecg_flag, self.eda_flag, self.emg_flag))
         t2.start()
-
-window = gui()
-window.show()
 
 @sio.event
 def connect():
@@ -166,4 +148,7 @@ def disconnect():
     print('disconnected from server')
 
 if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    window = gui()
+    window.show()
     app.exec()
