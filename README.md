@@ -82,9 +82,14 @@ Receive data from clients and visualize signals.
 ### visualize options
 
 1. Raw signal plot
-2. Bar graph of cross-correlations
+
+[![Image from Gyazo](https://i.gyazo.com/1c097c94e6f75fc26e98f9a1de58ce7e.png)](https://gyazo.com/1c097c94e6f75fc26e98f9a1de58ce7e)
+
+2. Bar graph of synchronicity
 * Calculate cross correlations of the past 500 signals and display the maximum correlation among time shifted correlations (multiplied by a hundred).
 * Conduct Cross Recurrence Quantification Analysis and display recurrence rate multiplied by a hundred. Determinism is also saved in a csv file.
+
+[![Image from Gyazo](https://i.gyazo.com/b74ae6556e894ab959565cbc83863d9e.png)](https://gyazo.com/b74ae6556e894ab959565cbc83863d9e)
 
 ## client.py / client2.py
 Receive data from sensors and send it to the server.
