@@ -1,7 +1,7 @@
 import ntplib
 import time
 
-ntp_server_host = 'ntp.nict.jp'
+ntp_server_host = 'time.google.com'
 
 class MyNTPClient(object):
     def __init__(self, ntp_server_host):

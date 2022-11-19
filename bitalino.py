@@ -1,13 +1,14 @@
 from pylsl import StreamInlet, resolve_stream, lost_error
 import datetime
 import os
+import time
 
 import timesync_nict
 
 # ntp server to request timestamp. Please update the link if you are in another timezone.
 ntp_server_host = 'ntp.nict.jp'
 
-def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg_flag):
+def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg_flag, freq):
     global ntp_server_host
     
     bitalino_fname = ''
@@ -54,6 +55,7 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
 
     # a list of signals smoothened by a filter
     corrected = [0, 0, 0, 0]
+    timestamp_dt = datetime.datetime.now()
 
     while True:
         channeldata = [None for i in channels]
@@ -61,13 +63,22 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
         try:
             # Receive samples
             samples, timestamp = inlet.pull_sample()
+            #print(timestamp)
         
         except lost_error as e:
             print('Connection from the BITalino device is lost')
             os._exit(0)
 
         channeldatastrlist = ''
-        timestamp = datetime.datetime.now().timestamp()
+        #timestamp = datetime.datetime.now().timestamp()
+        num = int(samples[0])
+        if num == 0:
+            timestamp_dt = datetime.datetime.now()
+        else:
+            timestamp_dt += datetime.timedelta(microseconds = int(1/freq * 1e6 - 100))
+        #time.sleep(0.01)
+        #print(timestamp_dt)
+        #timestamp = datetime.datetime.timestamp(timestamp_dt)
         ntp_client = timesync_nict.MyNTPClient(ntp_server_host)
         timestamp = ntp_client.get_nowtime()
         channeldata_send = {'person':person,'timestamp':timestamp}
@@ -76,7 +87,6 @@ def bitalino_handler(sio, person, mac_address, eeg_flag, ecg_flag, eda_flag, emg
             idx = channels.index(s)
             corrected[idx] = weighted_avg_param * corrected[idx] + (1-weighted_avg_param) * samples[idx+1]
             channeldata[idx] = corrected[idx]
-
             channeldatastr = '%s'%str(channeldata[idx])
             channeldata_send.update([(s,channeldata[idx])])
             if s != channels[-1]:

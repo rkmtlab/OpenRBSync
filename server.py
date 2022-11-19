@@ -76,6 +76,7 @@ class Ui_Form(object):
         self.comboBox_analysis.setObjectName("comboBox_analysis")
         self.comboBox_analysis.addItem("")
         self.comboBox_analysis.addItem("")
+        self.comboBox_analysis.addItem("")
         self.txt_port = QtWidgets.QLabel(Form)
         self.txt_port.setGeometry(QtCore.QRect(30, 150, 81, 16))
         self.txt_port.setObjectName("txt_port")
@@ -155,6 +156,7 @@ class Ui_Form(object):
         self.radioButton_bar.setText(_translate("Form", "Bar plot of synchrony"))
         self.comboBox_analysis.setItemText(0, _translate("Form", "Cross correlation"))
         self.comboBox_analysis.setItemText(1, _translate("Form", "Cross Recurrence Quantification Analysis"))
+        self.comboBox_analysis.setItemText(2, _translate("Form", "Phase Locking Value"))
         self.txt_port.setText(_translate("Form", "Port"))
         self.port_no.setText(_translate("Form", "3030"))
         self.lineedit_p1.setText(_translate("Form", "1"))
@@ -211,12 +213,36 @@ class gui(QtWidgets.QDialog):
     
     def setVis_off(self):
         self.vis_type = 'off'
+        if str(self.ui.comboBox_analysis.currentText()) == 'Cross Recurrence Quantification Analysis':
+            self.ui.txt_p1.setVisible(False)
+            self.ui.txt_p2.setVisible(False)
+            self.ui.lineedit_p1.setVisible(False)
+            self.ui.lineedit_p2.setVisible(False)
+            self.ui.txt_embeddingdimension.setVisible(False)
+            self.ui.txt_timedelay.setVisible(False)
+            self.ui.lineedit_embeddingdimension.setVisible(False)
 
     def setVis_raw(self):
         self.vis_type = 'raw'
+        if str(self.ui.comboBox_analysis.currentText()) == 'Cross Recurrence Quantification Analysis':
+            self.ui.txt_p1.setVisible(False)
+            self.ui.txt_p2.setVisible(False)
+            self.ui.lineedit_p1.setVisible(False)
+            self.ui.lineedit_p2.setVisible(False)
+            self.ui.txt_embeddingdimension.setVisible(False)
+            self.ui.txt_timedelay.setVisible(False)
+            self.ui.lineedit_embeddingdimension.setVisible(False)
 
     def setVis_bar(self):
         self.vis_type = 'bar'
+        if str(self.ui.comboBox_analysis.currentText()) == 'Cross Recurrence Quantification Analysis':
+            self.ui.txt_p1.setVisible(True)
+            self.ui.txt_p2.setVisible(True)
+            self.ui.lineedit_p1.setVisible(True)
+            self.ui.lineedit_p2.setVisible(True)
+            self.ui.txt_embeddingdimension.setVisible(True)
+            self.ui.txt_timedelay.setVisible(True)
+            self.ui.lineedit_embeddingdimension.setVisible(True)
 
     def setPortNo(self):
         global port
@@ -303,6 +329,7 @@ def my_message(sid, data):
     global plot_graph, p1_fname, p2_fname
     idxp = 0
     idxs = 0
+    signal = 0
 
     timestamp_ux = data['timestamp']
     timestamp_dt = datetime.datetime.fromtimestamp(timestamp_ux)
@@ -314,13 +341,28 @@ def my_message(sid, data):
     for key in data:
         if key == 'eeg' or key == 'ecg' or key == 'eda' or key == 'emg':
             idxs = plot_graph.channellist.index(key)
-            plot_graph.signals[idxs][idxp].append(data[key])
+            
+            if plot_graph.signal_queue[idxs][idxp].full():
+                oldest = plot_graph.signal_queue[idxs][idxp].get()
+                plot_graph.signal_sum[idxs][idxp] -= oldest
+                plot_graph.signal_queue[idxs][idxp].put(data[key])
+                plot_graph.signal_sum[idxs][idxp] += data[key]
+                # signal = plot_graph.signal_sum[idxs][idxp]/10
+                signal = data[key]
+            else:
+                plot_graph.signal_queue[idxs][idxp].put(data[key])
+                plot_graph.signal_sum[idxs][idxp] += data[key]
+                signal = data[key]
+            
+            #signal = data[key]
+
+            plot_graph.signals[idxs][idxp].append(signal)
             plot_graph.timelist[idxs][idxp].append(timestamp_ux)
 
-            if len(plot_graph.signals[idxs][idxp]) > 500:
-                plot_graph.signals[idxs][idxp] = plot_graph.signals[idxs][idxp][-500:]
-            if len(plot_graph.timelist[idxs][idxp]) > 500:
-                plot_graph.timelist[idxs][idxp] = plot_graph.timelist[idxs][idxp][-500:]
+            if len(plot_graph.signals[idxs][idxp]) > 100:
+                plot_graph.signals[idxs][idxp] = plot_graph.signals[idxs][idxp][-100:]
+            if len(plot_graph.timelist[idxs][idxp]) > 100:
+                plot_graph.timelist[idxs][idxp] = plot_graph.timelist[idxs][idxp][-100:]
         if key != 'timestamp':
             write_data += ',' + str(data[key])
     write_data += '\n'
